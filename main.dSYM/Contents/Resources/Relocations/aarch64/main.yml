@@ -1,0 +1,13 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     main
+relocations:
+  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _type_prompt, symObjAddr: 0x0, symBinAddr: 0x100003508, symSize: 0x1C }
+  - { offsetInCU: 0x54, offset: 0x54, size: 0x8, addend: 0x0, symName: _type_prompt, symObjAddr: 0x0, symBinAddr: 0x100003508, symSize: 0x1C }
+  - { offsetInCU: 0x69, offset: 0x69, size: 0x8, addend: 0x0, symName: _read_command, symObjAddr: 0x1C, symBinAddr: 0x100003524, symSize: 0x228 }
+  - { offsetInCU: 0xD7, offset: 0xD7, size: 0x8, addend: 0x0, symName: _is_shell_param, symObjAddr: 0x244, symBinAddr: 0x10000374C, symSize: 0x94 }
+  - { offsetInCU: 0x109, offset: 0x109, size: 0x8, addend: 0x0, symName: _search_command_path, symObjAddr: 0x2D8, symBinAddr: 0x1000037E0, symSize: 0x290 }
+  - { offsetInCU: 0x1A8, offset: 0x1A8, size: 0x8, addend: 0x0, symName: _exec_command, symObjAddr: 0x568, symBinAddr: 0x100003A70, symSize: 0x104 }
+  - { offsetInCU: 0x224, offset: 0x224, size: 0x8, addend: 0x0, symName: _bg_process_done, symObjAddr: 0x66C, symBinAddr: 0x100003B74, symSize: 0x38 }
+  - { offsetInCU: 0x248, offset: 0x248, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x6A4, symBinAddr: 0x100003BAC, symSize: 0x1E4 }
+...

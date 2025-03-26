@@ -1,0 +1,7 @@
+#define PARAMS_LIST_SIZE 50
+#define PARAM_LEN 50
+#define RUN_BACKGROUND '&'
+#define REDIRECT_STDOUT '>'
+#define REDIRECT_STDOUT_APPEND ">>"
+#define REDIRECT_STDIN '<'
+#define REDIRECT_STDIN_APPEND "<<"

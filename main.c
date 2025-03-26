@@ -6,43 +6,45 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #define PARAMS_LIST_SIZE 50
-#define PARAM_LEN 100
+#define PARAM_LEN 50
 #define RUN_BACKGROUND '&'
+#define REDIRECT_STDOUT '>'
+#define REDIRECT_STDOUT_APPEND ">>"
+#define REDIRECT_STDIN '<'
+#define REDIRECT_STDIN_APPEND "<<"
 
 void type_prompt() { printf("Type your command: "); }
 
-int read_command(char *command, char *params[]) {
+int parse_command(char *command_buf, char **params_buf) {
   char ch;
   int i = 0;
   for (; (ch = getchar()) != ' ' && ch != '\n' && i < PARAM_LEN; i++) {
-    command[i] = ch;
+    command_buf[i] = ch;
   }
-  command[i] = 0;
-  params[0] = command;
+  command_buf[i] = 0;
+  params_buf[0] = command_buf;
   i = 1;
+  // scanning parameters of the command
   for (; ch != '\n' && i < PARAMS_LIST_SIZE - 1; i++) {
-    while (ch == ' ')
-      ch = getchar();
+    while ((ch = getchar()) == ' ') // skip all spaces
+      ;
     int j = 0;
-    for (; ch != ' ' && ch != '\n' && j < PARAM_LEN; j++) {
-      if (params[i] == NULL) {
-        params[i] = malloc(PARAM_LEN);
-      }
-      params[i][j] = ch;
+    for (; ch != ' ' && ch != '\n' && j < PARAM_LEN - 1; j++) {
+      params_buf[i][j] = ch;
       ch = getchar();
     };
-    params[i][j] = 0;
+    params_buf[i][j] = 0;
   }
-  params[i] = NULL;
+  params_buf[i] = NULL;
   return i;
 }
 
-void handle_process_result(pid_t target_pid, char *command) {
-  int statloc;
-  pid_t pid = waitpid(target_pid, &statloc, 0);
-  printf("Process %d finished. Status: %d\n", pid, WEXITSTATUS(statloc));
-  if (WEXITSTATUS(statloc)) {
-    perror(command);
+void is_shell_param(char *params[]) {
+  int i = 0;
+  while (params[i] != NULL) {
+    if (strncmp(params[i], REDIRECT_STDOUT_APPEND, 2) &&
+        params[i + 1] != NULL) {
+    }
   }
 }
 
@@ -59,7 +61,6 @@ int search_command_path(char *command_prompt) {
     printf("Warning: No PATH variable in current environment\n");
     return 0;
   }
-  puts(search_paths);
   // start search from current directory
   char *path = "./";
   int i = 0;
@@ -70,9 +71,10 @@ int search_command_path(char *command_prompt) {
         ;
       closedir(dir);
       if (ent) {
-        char buf[PARAM_LEN];
-        *buf = 0;
+        char buf[PARAM_LEN] = {0};
         strlcat(buf, path, sizeof(buf));
+        // append slash on the end of path to correctly concatenate with
+        // filename
         char *end_of_buf = strchr(buf, 0);
         *end_of_buf = '/';
         *(end_of_buf + 1) = 0;
@@ -84,14 +86,16 @@ int search_command_path(char *command_prompt) {
       printf("Couldn't open directory %s: %s\n", path, strerror(errno));
       return 1;
     }
+    // supply search_paths only on first iteration
     path = strtok(i++ == 0 ? search_paths : NULL, ":");
   }
   return 0;
 }
 
-void exec_command(char *command, char *params[], void (*done_callback)(int)) {
-  if (*command != '/' && search_command_path(command) != 0) {
-    exit(2);
+int exec_command(char *command, char *params[], void (*done_callback)(int)) {
+  // if command is not abs path - search corresponding executable path
+  if (search_command_path(command) != 0) {
+    return 2;
   }
   pid_t pid = fork();
   int statloc = 0;
@@ -99,68 +103,51 @@ void exec_command(char *command, char *params[], void (*done_callback)(int)) {
     int exec_status = execve(command, params, 0);
     if (exec_status == -1) {
       perror(command);
-      exit(EXIT_FAILURE);
+      return 1;
     }
   } else {
     waitpid(pid, &statloc, 0);
     if (done_callback != NULL) {
       done_callback(WEXITSTATUS(statloc));
     }
-    exit(WEXITSTATUS(statloc));
+    return WEXITSTATUS(statloc);
   }
+  return 0;
 }
 void bg_process_done(int status) {
   printf("\nBg process done with status: %d", status);
 }
 
 int main() {
-  char command[PARAM_LEN] = {0};
   pid_t pid, bg_pid;
-  char *buf;
-  char *params[PARAMS_LIST_SIZE];
-  for (int i = 0; i < PARAMS_LIST_SIZE; i++) {
-    buf = malloc(PARAM_LEN);
-    if (buf == NULL) {
-      printf("Failed to allocate memory for index: %d\n", i);
-      exit(1);
-    }
-    params[i] = buf;
-  }
-
   int statloc, argc;
   while (1) {
     type_prompt();
-    argc = read_command(command, params);
+    char *command_buf = malloc(sizeof(char) * PARAM_LEN);
+    char **params_buf = malloc(sizeof(char[PARAMS_LIST_SIZE]));
+    for (int i = 0; i < PARAMS_LIST_SIZE; i++)
+      params_buf[i] = malloc(PARAM_LEN);
+    argc = parse_command(command_buf, params_buf);
+    printf("ARGC: %d\n", argc);
     pid = fork();
     if (pid == 0) {
-      /* printf("Executing command: %s, with params: ", command); */
-      /* for (int i = 0; i < PARAMS_LIST_SIZE && strlen(params[i]) > 0; i++) */
-      /*   printf("%s ", params[i]); */
-      /* putchar('\n'); */
-      if (*params[argc - 1] == RUN_BACKGROUND) {
-        params[argc - 1] = NULL;
+      if (*params_buf[argc - 1] == RUN_BACKGROUND) {
+        params_buf[argc - 1] = NULL;
         bg_pid = fork();
         if (bg_pid == 0) {
-          exec_command(command, params, bg_process_done);
+          exit(exec_command(command_buf, params_buf, bg_process_done));
         }
         exit(0);
-      } else {
-        exec_command(command, params, NULL);
       }
-    } else {
-      /* bg_pid = -1; */
-      /* if (*params[argc - 1] == RUN_BACKGROUND) { */
-      /*   params[argc - 1] = NULL; */
-      /*   bg_pid = fork(); */
-      /* } */
-      /* // if running in background and it's a parent process - skip waiting */
-      /* if (bg_pid > 0) */
-      /*   continue; */
-      waitpid(pid, &statloc, 0);
-      printf("Process %d finished. Status: %d\n", pid, WEXITSTATUS(statloc));
-      if (WEXITSTATUS(statloc)) {
-        perror(command);
-      }
+      exit(exec_command(command_buf, params_buf, NULL));
     }
+    waitpid(pid, &statloc, 0);
+    printf("Process %d finished. Status: %d\n", pid, WEXITSTATUS(statloc));
+    if (WEXITSTATUS(statloc) != 0) {
+      perror(command_buf);
+    }
+
+    free(command_buf);
+    free(params_buf);
   }
 }
