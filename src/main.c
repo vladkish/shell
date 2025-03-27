@@ -15,25 +15,56 @@ void bg_process_done(int status, pid_t pid) {
   type_prompt();
 }
 
-static char commands_history[HISTORY_LEN][COMMAND_SIZE];
-static int cmd_counter;
+typedef struct {
+  pid_t pid;
+  char command[COMMAND_SIZE];
+} bg_job;
 
-int add_to_history(char *command_buf, char **params_buf) {
-  char *cmd = commands_history[cmd_counter];
-  strlcpy(cmd, command_buf, COMMAND_SIZE);
-  strlcat(cmd, " ", COMMAND_SIZE);
+static char commands_history[HISTORY_LEN][COMMAND_SIZE];
+static int history_pos;
+
+static bg_job *background_jobs[BG_JOBS_SIZE];
+static int bg_jobs_pos;
+
+void build_full_command(char buf[COMMAND_SIZE], char *command_buf,
+                        char **params_buf) {
+  strlcpy(buf, command_buf, COMMAND_SIZE);
+  strlcat(buf, " ", COMMAND_SIZE);
   for (int i = 1; params_buf[i] != NULL && i < PARAMS_LIST_SIZE; i++)
-    strlcat(cmd, params_buf[i], COMMAND_SIZE);
-  cmd_counter++;
-  return 0;
+    strlcat(buf, params_buf[i], COMMAND_SIZE);
+}
+
+void add_bg_job(char *command_buf, char **params_buf, pid_t job_pid) {
+  bg_job *job = malloc(sizeof(bg_job));
+  job->pid = job_pid;
+  build_full_command(job->command, command_buf, params_buf);
+  background_jobs[bg_jobs_pos] = job;
+  printf("Job added: %d %s\n", job->pid, job->command);
+  bg_jobs_pos++;
+}
+
+void show_bg_jobs() {
+  if (bg_jobs_pos == 0) {
+    printf("There are no active background jobs!\n");
+    return;
+  }
+  for (int i = 0; i < bg_jobs_pos; i++) {
+    bg_job *job = background_jobs[i];
+    printf("%d | %s\n", job->pid, job->command);
+  }
+}
+
+void add_to_history(char *command_buf, char **params_buf) {
+  build_full_command(commands_history[history_pos], command_buf, params_buf);
+  history_pos++;
 }
 
 void show_history() {
-  if (cmd_counter == 0) {
+  if (history_pos == 0) {
     printf("Commands history is empty!\n");
     return;
   }
-  for (int i = 0; i < cmd_counter; i++) {
+  for (int i = 0; i < history_pos; i++) {
     printf("%s\n", commands_history[i]);
   }
 }
@@ -44,11 +75,13 @@ int handle_shell_commands(char *command_buf) {
     printf("Exiting...\n");
     is_handled = 1;
     exit(0);
-  };
-  if (strcmp(command_buf, "history") == 0) {
+  } else if (strcmp(command_buf, "history") == 0) {
     show_history();
     is_handled = 1;
-  }
+  } else if (strcmp(command_buf, "jobs") == 0) {
+    show_bg_jobs();
+    is_handled = 1;
+  };
   return is_handled;
 }
 
@@ -69,24 +102,23 @@ int main() {
     if (is_handled)
       continue;
     add_to_history(command_buf, params_buf);
-    pid = fork();
-    if (pid == 0) {
-      if (*params_buf[argc - 1] == RUN_BACKGROUND) {
-        params_buf[argc - 1] = NULL;
-        bg_pid = fork();
-        if (bg_pid == 0) {
-          exit(exec_command(command_buf, params_buf, bg_process_done));
-        }
-        exit(0);
+    if (*params_buf[argc - 1] == RUN_BACKGROUND) {
+      printf("Executing in background\n");
+      params_buf[argc - 1] = NULL;
+      bg_pid = fork();
+      if (bg_pid == 0) {
+        exit(exec_command(command_buf, params_buf, bg_process_done));
       }
-      exit(exec_command(command_buf, params_buf, NULL));
+      printf("Adding bg job. pos: %d\n", bg_jobs_pos);
+      add_bg_job(command_buf, params_buf, bg_pid);
+      printf("Bg job added. pos: %d\n", bg_jobs_pos);
+    } else {
+      printf("Normal execution\n");
+      int status = exec_command(command_buf, params_buf, NULL);
+      if (status != 0) {
+        printf("Failed to execute command!\n");
+      }
     }
-    waitpid(pid, &statloc, 0);
-    printf("Process %d finished. Status: %d\n", pid, WEXITSTATUS(statloc));
-    if (WEXITSTATUS(statloc) != 0) {
-      perror(command_buf);
-    }
-
     free(command_buf);
     free(params_buf);
   }
