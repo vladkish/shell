@@ -22,7 +22,9 @@ int main() {
     for (int i = 0; i < PARAMS_LIST_SIZE; i++)
       params_buf[i] = malloc(PARAM_LEN);
     argc = parse_command(command_buf, params_buf);
-    printf("ARGC: %d\n", argc);
+    if (argc == -1) {
+      continue;
+    }
     pid = fork();
     if (pid == 0) {
       if (*params_buf[argc - 1] == RUN_BACKGROUND) {

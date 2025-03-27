@@ -9,6 +9,8 @@ int parse_command(char *command_buf, char **params_buf) {
     command_buf[i] = ch;
   }
   command_buf[i] = 0;
+  if (!strlen(command_buf))
+    return -1;
   params_buf[0] = command_buf;
   i = 1;
   // scanning parameters of the command
