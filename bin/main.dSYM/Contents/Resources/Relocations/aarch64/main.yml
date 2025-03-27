@@ -2,14 +2,19 @@
 triple:          'arm64-apple-darwin'
 binary-path:     'bin/main'
 relocations:
-  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _type_prompt, symObjAddr: 0x0, symBinAddr: 0x100003530, symSize: 0x1C }
-  - { offsetInCU: 0x48, offset: 0x48, size: 0x8, addend: 0x0, symName: _type_prompt, symObjAddr: 0x0, symBinAddr: 0x100003530, symSize: 0x1C }
-  - { offsetInCU: 0x5D, offset: 0x5D, size: 0x8, addend: 0x0, symName: _bg_process_done, symObjAddr: 0x1C, symBinAddr: 0x10000354C, symSize: 0x38 }
-  - { offsetInCU: 0x81, offset: 0x81, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x54, symBinAddr: 0x100003584, symSize: 0x1DC }
-  - { offsetInCU: 0x26, offset: 0x16A, size: 0x8, addend: 0x0, symName: _parse_command, symObjAddr: 0x0, symBinAddr: 0x100003760, symSize: 0x240 }
-  - { offsetInCU: 0x41, offset: 0x185, size: 0x8, addend: 0x0, symName: _parse_command, symObjAddr: 0x0, symBinAddr: 0x100003760, symSize: 0x240 }
-  - { offsetInCU: 0xAF, offset: 0x1F3, size: 0x8, addend: 0x0, symName: _is_shell_param, symObjAddr: 0x240, symBinAddr: 0x1000039A0, symSize: 0x94 }
-  - { offsetInCU: 0x26, offset: 0x25C, size: 0x8, addend: 0x0, symName: _search_command_path, symObjAddr: 0x0, symBinAddr: 0x100003A34, symSize: 0x290 }
-  - { offsetInCU: 0x54, offset: 0x28A, size: 0x8, addend: 0x0, symName: _search_command_path, symObjAddr: 0x0, symBinAddr: 0x100003A34, symSize: 0x290 }
-  - { offsetInCU: 0xF3, offset: 0x329, size: 0x8, addend: 0x0, symName: _exec_command, symObjAddr: 0x290, symBinAddr: 0x100003CC4, symSize: 0x104 }
+  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _type_prompt, symObjAddr: 0x0, symBinAddr: 0x10000329C, symSize: 0x1C }
+  - { offsetInCU: 0x4D, offset: 0x4D, size: 0x8, addend: 0x0, symName: _commands_history, symObjAddr: 0x11C8, symBinAddr: 0x100008000, symSize: 0x0 }
+  - { offsetInCU: 0x75, offset: 0x75, size: 0x8, addend: 0x0, symName: _cmd_counter, symObjAddr: 0x26F40, symBinAddr: 0x10002DD78, symSize: 0x0 }
+  - { offsetInCU: 0x85, offset: 0x85, size: 0x8, addend: 0x0, symName: _type_prompt, symObjAddr: 0x0, symBinAddr: 0x10000329C, symSize: 0x1C }
+  - { offsetInCU: 0x9A, offset: 0x9A, size: 0x8, addend: 0x0, symName: _bg_process_done, symObjAddr: 0x1C, symBinAddr: 0x1000032B8, symSize: 0x4C }
+  - { offsetInCU: 0xCC, offset: 0xCC, size: 0x8, addend: 0x0, symName: _add_to_history, symObjAddr: 0x68, symBinAddr: 0x100003304, symSize: 0x108 }
+  - { offsetInCU: 0x12C, offset: 0x12C, size: 0x8, addend: 0x0, symName: _show_history, symObjAddr: 0x170, symBinAddr: 0x10000340C, symSize: 0xA4 }
+  - { offsetInCU: 0x15E, offset: 0x15E, size: 0x8, addend: 0x0, symName: _handle_shell_commands, symObjAddr: 0x214, symBinAddr: 0x1000034B0, symSize: 0x90 }
+  - { offsetInCU: 0x194, offset: 0x194, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x2A4, symBinAddr: 0x100003540, symSize: 0x1E8 }
+  - { offsetInCU: 0x26, offset: 0x28B, size: 0x8, addend: 0x0, symName: _parse_command, symObjAddr: 0x0, symBinAddr: 0x100003728, symSize: 0x240 }
+  - { offsetInCU: 0x41, offset: 0x2A6, size: 0x8, addend: 0x0, symName: _parse_command, symObjAddr: 0x0, symBinAddr: 0x100003728, symSize: 0x240 }
+  - { offsetInCU: 0xAF, offset: 0x314, size: 0x8, addend: 0x0, symName: _is_shell_param, symObjAddr: 0x240, symBinAddr: 0x100003968, symSize: 0x94 }
+  - { offsetInCU: 0x26, offset: 0x37D, size: 0x8, addend: 0x0, symName: _search_command_path, symObjAddr: 0x0, symBinAddr: 0x1000039FC, symSize: 0x290 }
+  - { offsetInCU: 0x54, offset: 0x3AB, size: 0x8, addend: 0x0, symName: _search_command_path, symObjAddr: 0x0, symBinAddr: 0x1000039FC, symSize: 0x290 }
+  - { offsetInCU: 0xF3, offset: 0x44A, size: 0x8, addend: 0x0, symName: _exec_command, symObjAddr: 0x290, symBinAddr: 0x100003C8C, symSize: 0x108 }
 ...

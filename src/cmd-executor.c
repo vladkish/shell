@@ -50,7 +50,8 @@ int search_command_path(char *command_prompt) {
   return 0;
 }
 
-int exec_command(char *command, char *params[], void (*done_callback)(int)) {
+int exec_command(char *command, char *params[],
+                 void (*done_callback)(int, pid_t)) {
   // if command is not abs path - search corresponding executable path
   if (search_command_path(command) != 0) {
     return 2;
@@ -66,7 +67,7 @@ int exec_command(char *command, char *params[], void (*done_callback)(int)) {
   } else {
     waitpid(pid, &statloc, 0);
     if (done_callback != NULL) {
-      done_callback(WEXITSTATUS(statloc));
+      done_callback(WEXITSTATUS(statloc), pid);
     }
     return WEXITSTATUS(statloc);
   }
