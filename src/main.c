@@ -103,6 +103,7 @@ typedef struct {
 } command_t;
 
 void *run_bg_job(void *arg) {
+  printf("Arg addr: %p\n", arg);
   command_t *cmd = arg;
   printf("Running bg cmd: %s with param: %s\n", cmd->executable,
          cmd->params[1]);
@@ -127,6 +128,7 @@ void *run_bg_job(void *arg) {
   printf("Job %d state updated\n", job_id);
   free(cmd->params);
   free(cmd->executable);
+  free(cmd);
   type_prompt();
   return status;
 }
@@ -150,9 +152,10 @@ int main() {
     add_to_history(command_buf, params_buf);
     if (*params_buf[argc - 1] == RUN_BACKGROUND) {
       params_buf[argc - 1] = NULL;
-      command_t thread_params = {.executable = command_buf,
-                                 .params = params_buf};
-      if (pthread_create(&thread, NULL, run_bg_job, &thread_params) != 0) {
+      command_t *thread_params = malloc(sizeof(command_t));
+      thread_params->executable = command_buf;
+      thread_params->params = params_buf;
+      if (pthread_create(&thread, NULL, run_bg_job, thread_params) != 0) {
         handle_error("Failed to create thread");
       };
     } else {
