@@ -54,6 +54,7 @@ int search_command_path(char *command_prompt) {
 }
 
 int exec_command(char *command, char *params[],
+                 void (*init_callback)(char *command, char **params, pid_t),
                  void (*done_callback)(int, pid_t)) {
 
   // That function divides execution flow to 2 processes. One for executing
@@ -71,6 +72,8 @@ int exec_command(char *command, char *params[],
       return 1;
     }
   } else {
+    return pid;
+    init_callback(command, params, pid);
     waitpid(pid, &statloc, 0);
     if (done_callback != NULL) {
       done_callback(WEXITSTATUS(statloc), pid);
@@ -78,4 +81,23 @@ int exec_command(char *command, char *params[],
     return WEXITSTATUS(statloc);
   }
   return 0;
+}
+
+void show_history();
+void show_bg_jobs();
+
+int handle_shell_commands(char *command_buf) {
+  int is_handled = 0;
+  if (strcmp(command_buf, "exit") == 0) {
+    printf("Exiting...\n");
+    is_handled = 1;
+    exit(0);
+  } else if (strcmp(command_buf, "history") == 0) {
+    show_history();
+    is_handled = 1;
+  } else if (strcmp(command_buf, "jobs") == 0) {
+    show_bg_jobs();
+    is_handled = 1;
+  };
+  return is_handled;
 }
