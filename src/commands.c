@@ -53,32 +53,28 @@ int search_command_path(char *command_prompt) {
   return -1;
 }
 
-int exec_command(char *command, char *params[],
-                 void (*init_callback)(char *command, char **params, pid_t),
-                 void (*done_callback)(int, pid_t)) {
+int exec_command(char *command, char *params[]) {
 
   // That function divides execution flow to 2 processes. One for executing
   // command itself and second one for processing execution result
+  printf("Searching path for: %s\n", command);
+  if (search_command_path(command) != 0) {
+    return -1;
+  }
 
   pid_t pid = fork();
-  int statloc = 0;
-  if (pid == 0) {
-    if (search_command_path(command) != 0) {
-      return 2;
-    }
-    int exec_status = execve(command, params, 0);
-    if (exec_status == -1) {
-      perror(command);
-      return 1;
-    }
-  } else {
+  if (pid == -1) {
+    perror("fork");
+    return -1;
+  }
+  if (pid != 0)
     return pid;
-    init_callback(command, params, pid);
-    waitpid(pid, &statloc, 0);
-    if (done_callback != NULL) {
-      done_callback(WEXITSTATUS(statloc), pid);
-    }
-    return WEXITSTATUS(statloc);
+
+  printf("Executing command: %s\n", command);
+  int exec_status = execve(command, params, 0);
+  if (exec_status == -1) {
+    perror(command);
+    return -1;
   }
   return 0;
 }

@@ -13,16 +13,19 @@
 
 void type_prompt() { printf("Type your command: "); }
 
-typedef enum { RUNNING, FINISHED } BgJobStateT;
+typedef enum { RUNNING, SUCCEEDED, FAILED } BgJobStateT;
 
-static char *get_state_label(BgJobStateT state) {
-  char *buf = malloc(sizeof(char) * 10);
+static const char *get_state_label(BgJobStateT state) {
+  const char *buf = malloc(sizeof(char) * 10);
   switch (state) {
   case RUNNING:
     buf = "Running";
     break;
-  case FINISHED:
+  case SUCCEEDED:
     buf = "Finished";
+    break;
+  case FAILED:
+    buf = "Failed";
     break;
   }
   return buf;
@@ -40,18 +43,9 @@ static int history_pos;
 static BgJob *background_jobs[BG_JOBS_SIZE];
 static int bg_jobs_pos;
 
-void bg_job_done_callback(int status_code, pid_t pid, int pipefd[2]) {
+void complete_bg_job(int status_code, pid_t pid, int job_id) {
   printf("\nBg process %d done with status: %d\n", pid, status_code);
-  char buf[15];
-  printf("Reading from %d\n", pipefd[0]);
-  if (read(pipefd[0], buf, sizeof(buf)) == -1) {
-    perror("read");
-    exit(1);
-  }
-  printf("Received from buf: %s\n", buf);
-  int job_id = atoi(buf);
-  printf("Job id: %d\n", job_id);
-  background_jobs[job_id]->state = FINISHED;
+  background_jobs[job_id]->state = SUCCEEDED;
   printf("Job %d state updated\n", job_id);
   type_prompt();
 }
@@ -83,7 +77,7 @@ void show_bg_jobs() {
   }
   for (int i = 0; i < bg_jobs_pos; i++) {
     BgJob *job = background_jobs[i];
-    char *job_status = get_state_label(job->state);
+    const char *job_status = get_state_label(job->state);
     printf("%d | %s | %s\n", job->pid, job_status, job->command);
   }
 }
@@ -104,24 +98,42 @@ void show_history() {
 }
 
 typedef struct {
-  char *command_buf;
-  char **params_buf;
-} bg_job_runner_params;
+  char *executable;
+  char **params;
+} command_t;
 
 void *run_bg_job(void *arg) {
+  command_t *cmd = arg;
+  printf("Running bg cmd: %s with param: %s\n", cmd->executable,
+         cmd->params[1]);
   int statloc;
-  bg_job_runner_params *cmd_args = arg;
-  pid_t runner_pid = exec_command(cmd_args->command_buf, cmd_args->params_buf);
-  int job_id =
-      add_bg_job(cmd_args->command_buf, cmd_args->params_buf, runner_pid);
-  waitpid(runner_pid, &statloc, 0);
-  bg_job_done_callback(WEXITSTATUS(statloc), runner_pid, job_id);
-  return NULL;
+  int *status = malloc(sizeof(int));
+  pid_t runner_pid = exec_command(cmd->executable, cmd->params);
+  printf("Runner pid: %d\n", runner_pid);
+  if (runner_pid == -1) {
+    status = &(int){1};
+    return status;
+  }
+
+  int job_id = add_bg_job(cmd->executable, cmd->params, runner_pid);
+  if (waitpid(runner_pid, &statloc, 0) == -1) {
+    printf("waitpid failed\n");
+    status = &(int){-1};
+    return status;
+  };
+  status = &(int){WEXITSTATUS(statloc)};
+  printf("\nBg process %d done with status: %d\n", runner_pid, *status);
+  background_jobs[job_id]->state = *status == 0 ? SUCCEEDED : FAILED;
+  printf("Job %d state updated\n", job_id);
+  free(cmd->params);
+  free(cmd->executable);
+  type_prompt();
+  return status;
 }
 
 int main() {
-  pid_t bg_pid;
-  int argc, pipefd[2];
+  int argc, statloc;
+  pthread_t thread;
   while (1) {
     type_prompt();
     char *command_buf = malloc(sizeof(char) * PARAM_LEN);
@@ -137,50 +149,24 @@ int main() {
       continue;
     add_to_history(command_buf, params_buf);
     if (*params_buf[argc - 1] == RUN_BACKGROUND) {
-      printf("Executing in background\n");
       params_buf[argc - 1] = NULL;
-      bg_job_runner_params thread_params = {.command_buf = command_buf,
-                                            .params_buf = params_buf};
-      if (pthread_create(NULL, NULL, run_bg_job, &thread_params) != 0) {
+      command_t thread_params = {.executable = command_buf,
+                                 .params = params_buf};
+      if (pthread_create(&thread, NULL, run_bg_job, &thread_params) != 0) {
         handle_error("Failed to create thread");
       };
-      /* if (pipe(pipefd) == -1) */
-      /*   perror("pipe"); */
-      /* bg_pid = fork(); */
-      /* if (bg_pid == 0) { */
-      /*   if (close(pipefd[1]) == -1) */
-      /*     perror("close"); */
-      /*   int exit_code = */
-      /*       exec_command(command_buf, params_buf, pipefd,
-         bg_job_done_callback); */
-      /*   if (close(pipefd[0]) == -1) */
-      /*     perror("close"); */
-      /*   exit(exit_code); */
-      /* } */
-      /* if (close(pipefd[0]) == -1)  */
-      /*   perror("close"); */
-      int job_id = add_bg_job(command_buf, params_buf, bg_pid);
-      size_t buf_size = snprintf(NULL, 0, "%d", job_id) +
-                        1; // get the required size for buffer to allocate
-      char buf[buf_size];
-      snprintf(buf, buf_size, "%d", job_id);
-      printf("Writing job id to pipe: %s|\n", buf);
-      if (write(pipefd[1], buf, strlen(buf) + 1) != strlen(buf) + 1) {
-        perror("write");
-      }
-      if (close(pipefd[1]) == -1)
-        perror("close");
-      /* printf("Adding bg job. pos: %d\n", bg_jobs_pos); */
-      /* add_bg_job(command_buf, params_buf, bg_pid); */
-      /* printf("Bg job added. pos: %d\n", bg_jobs_pos); */
     } else {
-      printf("Normal execution\n");
-      int status = exec_command(command_buf, params_buf, NULL, NULL);
-      if (status != EXIT_SUCCESS) {
-        printf("Failed to execute command!\n");
+      pid_t runner_pid = exec_command(command_buf, params_buf);
+      if (runner_pid == -1) {
+        printf("Failed to launch command!\n");
+      } else {
+        waitpid(runner_pid, &statloc, 0);
+        if (WEXITSTATUS(statloc) != EXIT_SUCCESS) {
+          printf("Failed to execute command!\n");
+        }
       }
+      free(command_buf);
+      free(params_buf);
     }
-    free(command_buf);
-    free(params_buf);
   }
 }
