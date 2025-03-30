@@ -47,7 +47,8 @@ int *extract_redirects(char *params[]) {
   int fd;
   for (int i = 0; i < 3; i++)
     fds_for_dup[i] = -1;
-  for (int i = 0; params[i] != NULL; i++) {
+  for (int i = 1; params[i] != NULL; i++) {
+    printf("Checking: %s|\n", params[i]);
     if (strcmp(params[i], ">") == 0 && params[i + 1] != NULL) {
       if ((fd = open(params[i + 1], O_CREAT | O_WRONLY)) == -1) {
         return NULL;
@@ -55,8 +56,11 @@ int *extract_redirects(char *params[]) {
       fds_for_dup[1] = fd;
       params_shift(params, i);
       params_shift(params, i);
-    }
-    if (strcmp(params[i], "<") == 0 && params[i + 1] != NULL) {
+      printf("Shift completed\n");
+      for (int i = 0; params[i] != NULL; i++) {
+        printf("param: %s\n", params[i]);
+      }
+    } else if (strcmp(params[i], "<") == 0 && params[i + 1] != NULL) {
       if ((fd = open(params[i + 1], O_CREAT | O_RDONLY)) == -1) {
         return NULL;
       }

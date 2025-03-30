@@ -10,8 +10,10 @@
 void command_to_str(char buf[COMMAND_SIZE], command_t *cmd) {
   strlcpy(buf, cmd->executable, COMMAND_SIZE);
   strlcat(buf, " ", COMMAND_SIZE);
-  for (int i = 1; cmd->argv[i] != NULL && i < PARAMS_LIST_SIZE; i++)
+  for (int i = 1; cmd->argv[i] != NULL && i < PARAMS_LIST_SIZE; i++) {
     strlcat(buf, cmd->argv[i], COMMAND_SIZE);
+    strlcat(buf, " ", COMMAND_SIZE);
+  }
 }
 
 static int search_executable_path(char *executable) {

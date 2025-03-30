@@ -10,6 +10,13 @@
 int parse_command(command_t *cmd);
 int *extract_redirects(char *params[]);
 
+int count_argv(char **argv) {
+  int i = 0;
+  for (; argv[i] != NULL; i++)
+    ;
+  return i;
+}
+
 int main() {
   int argc, statloc;
   pthread_t thread;
@@ -36,6 +43,8 @@ int main() {
       perror("open");
       continue;
     }
+    argc = count_argv(cmd->argv);
+    printf("count %d\n", argc);
     if (*cmd->argv[argc - 1] == RUN_BACKGROUND) {
       cmd->argv[argc - 1] = NULL;
       struct job_params *job_params = malloc(sizeof(struct job_params));
