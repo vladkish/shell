@@ -6,39 +6,46 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define handle_error(msg)                                                      \
-  do {                                                                         \
-    perror(msg);                                                               \
-    exit(EXIT_FAILURE);                                                        \
-  } while (0)
+
+int parse_command(command_t *cmd);
+int *extract_redirects(char *params[]);
 
 int main() {
   int argc, statloc;
   pthread_t thread;
   while (1) {
     type_prompt();
-    char *command_buf = malloc(sizeof(char) * PARAM_LEN);
-    char **params_buf = malloc(sizeof(char[PARAMS_LIST_SIZE]));
+    // TODO: рассмотреть выделение памяти для команды изначально в стеке, а если
+    // команда запускается в фоне - копировать ее памяти в кучу
+    command_t *cmd = malloc(sizeof(command_t));
+    cmd->executable = malloc(sizeof(char) * PARAM_LEN);
+    cmd->argv = malloc(sizeof(char[PARAMS_LIST_SIZE]));
     for (int i = 0; i < PARAMS_LIST_SIZE; i++)
-      params_buf[i] = malloc(PARAM_LEN);
-    argc = parse_command(command_buf, params_buf);
+      cmd->argv[i] = malloc(PARAM_LEN);
+    argc = parse_command(cmd);
     if (argc == -1) {
       continue;
     }
-    int is_handled = handle_shell_commands(command_buf);
+    int is_handled = handle_shell_commands(cmd->executable);
     if (is_handled)
       continue;
-    add_to_history(command_buf, params_buf);
-    if (*params_buf[argc - 1] == RUN_BACKGROUND) {
-      params_buf[argc - 1] = NULL;
-      command_t *thread_params = malloc(sizeof(command_t));
-      thread_params->executable = command_buf;
-      thread_params->params = params_buf;
-      if (pthread_create(&thread, NULL, run_bg_job, thread_params) != 0) {
+    add_to_history(cmd);
+    int *fds_for_dup = extract_redirects(cmd->argv);
+    if (fds_for_dup == NULL) // indicates error
+    {
+      perror("open");
+      continue;
+    }
+    if (*cmd->argv[argc - 1] == RUN_BACKGROUND) {
+      cmd->argv[argc - 1] = NULL;
+      struct job_params *job_params = malloc(sizeof(struct job_params));
+      job_params->command = cmd;
+      job_params->fds_to_dup = fds_for_dup;
+      if (pthread_create(&thread, NULL, run_bg_job, job_params) != 0) {
         handle_error("Failed to create thread");
       };
     } else {
-      pid_t runner_pid = exec_command(command_buf, params_buf);
+      pid_t runner_pid = exec_command(cmd, fds_for_dup);
       if (runner_pid == -1) {
         printf("Failed to launch command!\n");
       } else {
@@ -47,8 +54,7 @@ int main() {
           printf("Failed to execute command!\n");
         }
       }
-      free(command_buf);
-      free(params_buf);
+      free_cmd(cmd);
     }
   }
 }

@@ -1,17 +1,19 @@
-#include "main.h"
+#include "commands.h"
+#include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-int parse_command(char *command_buf, char **params_buf) {
+int parse_command(command_t *cmd) {
   char ch;
   int i = 0;
   for (; (ch = getchar()) != ' ' && ch != '\n' && i < PARAM_LEN; i++) {
-    command_buf[i] = ch;
+    cmd->executable[i] = ch;
   }
-  command_buf[i] = 0;
-  if (!strlen(command_buf))
+  cmd->executable[i] = 0;
+  if (!strlen(cmd->executable))
     return -1;
-  params_buf[0] = command_buf;
+  cmd->argv[0] = cmd->executable;
   i = 1;
   // scanning parameters of the command
   for (; ch != '\n' && i < PARAMS_LIST_SIZE - 1; i++) {
@@ -19,20 +21,49 @@ int parse_command(char *command_buf, char **params_buf) {
       ;
     int j = 0;
     for (; ch != ' ' && ch != '\n' && j < PARAM_LEN - 1; j++) {
-      params_buf[i][j] = ch;
+      cmd->argv[i][j] = ch;
       ch = getchar();
     };
-    params_buf[i][j] = 0;
+    cmd->argv[i][j] = 0;
   }
-  params_buf[i] = NULL;
+  cmd->argv[i] = NULL;
   return i;
 }
 
-void is_shell_param(char *params[]) {
-  int i = 0;
-  while (params[i] != NULL) {
-    if (strncmp(params[i], REDIRECT_STDOUT_APPEND, 2) &&
-        params[i + 1] != NULL) {
+void params_shift(char *params[], int shift_from) {
+  int i = shift_from;
+  for (; params[i + 1] != NULL; i++) {
+    params[i] = params[i + 1];
+  }
+  params[i] = NULL;
+}
+
+// If invalid params supplied - returns NULL. Otherwise returns array with 3
+// elements length of opened file descriptors, where idx corresponds to std
+// stream for redirect from, and value corresponds to a new file descriptor
+// Also that function removes found redirect params by shifting params array
+int *extract_redirects(char *params[]) {
+  int *fds_for_dup = malloc(3 * sizeof(int));
+  int fd;
+  for (int i = 0; i < 3; i++)
+    fds_for_dup[i] = -1;
+  for (int i = 0; params[i] != NULL; i++) {
+    if (strcmp(params[i], ">") == 0 && params[i + 1] != NULL) {
+      if ((fd = open(params[i + 1], O_CREAT | O_WRONLY)) == -1) {
+        return NULL;
+      }
+      fds_for_dup[1] = fd;
+      params_shift(params, i);
+      params_shift(params, i);
+    }
+    if (strcmp(params[i], "<") == 0 && params[i + 1] != NULL) {
+      if ((fd = open(params[i + 1], O_CREAT | O_RDONLY)) == -1) {
+        return NULL;
+      }
+      fds_for_dup[0] = fd;
+      params_shift(params, i);
+      params_shift(params, i);
     }
   }
+  return fds_for_dup;
 }

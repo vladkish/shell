@@ -1,11 +1,15 @@
 
 #ifndef UTILS_H
-#define UTILS_H
 
-#include "main.h"
+#define UTILS_H
+#define handle_error(msg)                                                      \
+  do {                                                                         \
+    perror(msg);                                                               \
+    exit(EXIT_FAILURE);                                                        \
+  } while (0)
+
+#define is_parent_proc(pid) (pid != 0)
 
 void type_prompt();
-void build_full_command(char buf[COMMAND_SIZE], char *command_buf,
-                        char **params_buf);
 
 #endif

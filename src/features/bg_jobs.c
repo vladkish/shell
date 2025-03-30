@@ -1,5 +1,4 @@
 #include "bg_jobs.h"
-#include "../commands.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,11 +21,11 @@ static const char *get_state_label(BgJobStateT state) {
 static BgJob *background_jobs[BG_JOBS_SIZE];
 static int bg_jobs_pos;
 
-int add_bg_job(char *command_buf, char **params_buf, pid_t job_pid) {
+int add_bg_job(command_t *cmd, pid_t job_pid) {
   BgJob *job = malloc(sizeof(BgJob));
   job->pid = job_pid;
   job->state = RUNNING;
-  build_full_command(job->command, command_buf, params_buf);
+  command_to_str(job->command, cmd);
   background_jobs[bg_jobs_pos] = job;
   printf("Job added: %d %s\n", job->pid, job->command);
   int job_idx = bg_jobs_pos;
@@ -47,20 +46,16 @@ void show_bg_jobs() {
 }
 
 void *run_bg_job(void *arg) {
-  printf("Arg addr: %p\n", arg);
-  command_t *cmd = arg;
-  printf("Running bg cmd: %s with param: %s\n", cmd->executable,
-         cmd->params[1]);
+  struct job_params *args = arg;
   int statloc;
   int *status = malloc(sizeof(int));
-  pid_t runner_pid = exec_command(cmd->executable, cmd->params);
-  printf("Runner pid: %d\n", runner_pid);
+  pid_t runner_pid = exec_command(args->command, args->fds_to_dup);
   if (runner_pid == -1) {
     status = &(int){1};
     return status;
   }
 
-  int job_id = add_bg_job(cmd->executable, cmd->params, runner_pid);
+  int job_id = add_bg_job(args->command, runner_pid);
   if (waitpid(runner_pid, &statloc, 0) == -1) {
     printf("waitpid failed\n");
     status = &(int){-1};
@@ -70,9 +65,8 @@ void *run_bg_job(void *arg) {
   printf("\nBg process %d done with status: %d\n", runner_pid, *status);
   background_jobs[job_id]->state = *status == 0 ? SUCCEEDED : FAILED;
   printf("Job %d state updated\n", job_id);
-  free(cmd->params);
-  free(cmd->executable);
-  free(cmd);
+  free_cmd(args->command);
+  free(args);
   type_prompt();
   return status;
 }
