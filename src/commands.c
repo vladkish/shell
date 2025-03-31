@@ -120,6 +120,9 @@ int handle_shell_commands(char *executable) {
 }
 
 void free_cmd(command_t *cmd) {
+  for (int i = 0; i < PARAMS_LIST_SIZE; i++) {
+    free(cmd->argv[i]);
+  }
   free(cmd->argv);
   free(cmd->executable);
   free(cmd);

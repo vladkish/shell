@@ -1,4 +1,3 @@
-#include "main.h"
 #include "commands.h"
 #include "features/bg_jobs.h"
 #include "features/history.h"
@@ -6,6 +5,8 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#define RUN_BACKGROUND '&'
 
 int parse_command(command_t *cmd);
 int *extract_redirects(char *params[]);
@@ -18,7 +19,7 @@ int count_argv(char **argv) {
 }
 
 int main() {
-  int argc, statloc;
+  int argc, statloc, last_cmd_status = 0;
   pthread_t thread;
   while (1) {
     type_prompt();
@@ -59,7 +60,8 @@ int main() {
         printf("Failed to launch command!\n");
       } else {
         waitpid(runner_pid, &statloc, 0);
-        if (WEXITSTATUS(statloc) != EXIT_SUCCESS) {
+        last_cmd_status = WEXITSTATUS(statloc);
+        if (last_cmd_status != EXIT_SUCCESS) {
           printf("Failed to execute command!\n");
         }
       }
