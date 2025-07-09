@@ -83,7 +83,7 @@ int *extract_redirects(char *params[]) {
       fds_for_dup[0] = fd;
     } else if (is_valid_redirect_param(params, i, ">>")) {
       if ((fd = get_redirect_fd(params, i, O_CREAT | O_WRONLY | O_APPEND)) ==
-          -1) {
+          -1) { 
         return NULL;
       }
       fds_for_dup[1] = fd;
